@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf, empty  with context %}
+{% block title %}Brand Guidelines{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <div><h1 class="bb-page-title">Brand Guidelines</h1><p class="bb-page-sub">The approved rules every submission is checked against.</p></div>
+  {% if current_user.is_admin %}<a class="btn btn-primary" href="{{ url_for('guidelines.new') }}"><i class="bi bi-plus-lg"></i> Add guideline</a>{% endif %}
+</div>
+{% if items %}
+<div class="row g-3">
+  {% for g in items %}
+  <div class="col-md-6 col-xl-4"><div class="bb-card h-100 d-flex flex-column">
+    <div class="bb-card-b flex-grow-1">
+      <div class="d-flex justify-content-between"><h2 class="h5">{{ g.title }}</h2>
+        <span class="st {{ 'st-approved' if g.is_active else '' }}">{{ 'Active' if g.is_active else 'Inactive' }}</span></div>
+      <div class="text-muted small mb-2">{{ g.company_name }}</div>
+      <p class="small mb-2">{{ (g.voice_tone or g.description or 'No description')|truncate(130) }}</p>
+      <div class="small text-muted"><i class="bi bi-patch-check"></i> {{ g.facts|length }} facts ·
+        <i class="bi bi-ban"></i> {{ g.prohibited_words.splitlines()|select|list|length }} restricted words ·
+        {% if g.logo %}<i class="bi bi-image"></i> logo{% else %}no logo{% endif %}</div>
+    </div>
+    <div class="bb-card-b border-top d-flex gap-2 flex-wrap">
+      <a class="btn btn-sm btn-outline-primary" href="{{ url_for('guidelines.view', gid=g.id) }}">View</a>
+      {% if current_user.is_admin %}
+      <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('guidelines.edit', gid=g.id) }}">Edit</a>
+      <form method="post" action="{{ url_for('guidelines.delete', gid=g.id) }}" data-confirm="Delete this guideline and its uploaded files? Existing submissions keep their history.">
+        {{ csrf() }}<button class="btn btn-sm btn-outline-danger" type="submit">Delete</button></form>
+      {% endif %}
+    </div></div></div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="bb-card">{% call empty('journal-bookmark', 'No brand guidelines yet', 'Content cannot be checked until an administrator adds guidelines.') %}
+  {% if current_user.is_admin %}<a class="btn btn-primary mt-3" href="{{ url_for('guidelines.new') }}">Create the first guideline</a>{% endif %}{% endcall %}</div>
+{% endif %}
+{% endblock %}

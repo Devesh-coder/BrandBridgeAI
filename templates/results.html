@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf, sev, status, verify, empty  with context %}
+{% block title %}Report – {{ sub.title }}{% endblock %}
+{% block content %}
+{% set is_author = sub.author_id == current_user.id %}
+{% set can_act = sub.is_editable and is_author and current_user.can_submit %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <div>
+    <h1 class="bb-page-title">{{ sub.title }}</h1>
+    <p class="bb-page-sub mb-2">{{ sub.type_label }} · by {{ sub.author.name }} · version {{ sub.version }} · {{ sub.created_at|dt }}</p>
+    {{ status(sub.status) }}
+  </div>
+  <div class="d-flex gap-2 flex-wrap no-print">
+    <button class="btn btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer"></i> Print report</button>
+    <a class="btn btn-outline-secondary" href="{{ url_for('content.revisions', sub_id=sub.id) }}"><i class="bi bi-clock-history"></i> Revision history</a>
+  </div>
+</div>
+
+<div class="workflow my-3 no-print">
+  {% set st = sub.status %}
+  <span class="step on">1 Submitted</span><span class="step on">2 Checked</span>
+  <span class="step {{ 'on' if pending == 0 }}">3 Corrections</span>
+  <span class="step {{ 'on' if st in ('pending_review','approved','rejected') }}">4 Sent for review</span>
+  <span class="step {{ 'on' if st in ('approved','rejected') }}">5 Human decision</span>
+</div>
+
+{% if sub.status == 'changes_requested' %}
+<div class="alert alert-warning"><i class="bi bi-arrow-repeat"></i> <strong>A reviewer requested changes.</strong> Update the content, re-run the check and send it for review again.
+  {% set cr = sub.reviews|selectattr('decision','equalto','changes_requested')|list|last %}{% if cr %}<div class="mt-1">“{{ cr.comment }}” — {{ cr.reviewer.name }}</div>{% endif %}</div>
+{% elif sub.status == 'approved' %}<div class="alert alert-success"><i class="bi bi-patch-check"></i> Approved by a human reviewer.</div>
+{% elif sub.status == 'rejected' %}<div class="alert alert-danger"><i class="bi bi-x-octagon"></i> Rejected by a human reviewer.</div>{% endif %}
+{% if not sub.is_check_current %}<div class="alert alert-info no-print"><i class="bi bi-info-circle"></i> The content changed after the last check. <strong>Re-run the check</strong> to refresh the report before sending for review.</div>{% endif %}
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-4"><div class="bb-card h-100"><div class="bb-card-b text-center">
+    <div class="gauge" data-score="{{ summary.score }}"><div><div><div class="num">{{ summary.score }}</div><small>/ 100</small></div></div></div>
+    <div class="fw-semibold mt-3">Brand Compliance Score</div>
+    <div class="text-muted small">{{ summary.label }}</div>
+    <button class="btn btn-sm btn-link" type="button" data-bs-toggle="collapse" data-bs-target="#how">How is this calculated?</button>
+    <div class="collapse text-start small text-muted" id="how">{{ score_text }}</div></div></div></div>
+  <div class="col-lg-8"><div class="bb-card h-100"><div class="bb-card-h">Summary</div><div class="bb-card-b">
+    <div class="row text-center g-2 mb-3">
+      <div class="col-3"><div class="fs-3 fw-bold">{{ summary.total }}</div><div class="small text-muted">Total issues</div></div>
+      <div class="col-3"><div class="fs-3 fw-bold text-danger">{{ summary.counts.High }}</div><div class="small text-muted">High</div></div>
+      <div class="col-3"><div class="fs-3 fw-bold text-warning">{{ summary.counts.Medium }}</div><div class="small text-muted">Medium</div></div>
+      <div class="col-3"><div class="fs-3 fw-bold text-primary">{{ summary.counts.Low }}</div><div class="small text-muted">Low</div></div></div>
+    <div class="d-flex flex-wrap gap-2 mb-2">{% for c, n in by_cat.items() if n %}<span class="st">{{ c }}: {{ n }}</span>{% endfor %}
+      {% if not summary.total %}<span class="st st-approved">No issues detected</span>{% endif %}</div>
+    {% set nv = issues|selectattr('verification','ne','none')|list|length %}
+    {% if nv %}<div class="small"><span class="sev verify"><i class="bi bi-person-check"></i> {{ nv }} item(s) need human verification</span> – the system could not confirm these automatically and does not claim they are wrong.</div>{% endif %}
+    <div class="small text-muted mt-2"><strong>Overall review status:</strong> {{ summary.label }}. A human reviewer makes the final decision.</div>
+    {% if sub.ai_status %}<div class="small text-muted mt-1"><i class="bi bi-cpu"></i> {{ sub.ai_status }}</div>{% endif %}
+  </div></div></div>
+</div>
+
+<div class="row g-3">
+  <div class="col-xl-7">
+    <h2 class="h5 mb-3">Issues &amp; suggested corrections</h2>
+    {% if not issues %}<div class="bb-card">{% call empty('check2-circle', 'No issues found', 'The automated checks found nothing to flag. Reviewers can still request changes.') %}{% endcall %}</div>{% endif %}
+    {% for i in issues %}{% set s = i.suggestion %}
+    <article class="issue issue-{{ i.severity }} {{ 'done' if s and s.status != 'pending' }}" id="issue-{{ i.id }}">
+      <div class="p-3">
+        <div class="d-flex justify-content-between gap-2 flex-wrap mb-2">
+          <h3>{{ i.title }}</h3>
+          <div class="d-flex gap-1 flex-wrap">{{ sev(i.severity) }}<span class="st">{{ i.category }}</span>{{ verify(i.verification) }}
+            {% if i.source == 'ai' %}<span class="st"><i class="bi bi-cpu"></i> AI</span>{% endif %}
+            {% if s and s.status != 'pending' %}<span class="st st-{{ 'approved' if s.status in ('accepted','edited') else 'checked' }}">{{ s.status|capitalize }}</span>{% endif %}</div></div>
+        <div class="meta-label">Original content</div><div class="quote orig mb-2">{{ i.original_text }}</div>
+        <div class="meta-label">Why this is a problem</div><p class="mb-2">{{ i.explanation }}</p>
+        <div class="row g-2 mb-2">
+          <div class="col-md-6"><div class="meta-label">Violated guideline</div><div class="small">{{ i.guideline_violated or '—' }}</div></div>
+          <div class="col-md-6"><div class="meta-label">Related approved source</div><div class="small">{{ i.related_source or 'None available' }}</div></div></div>
+        <div class="meta-label">Suggested correction</div>
+        <p class="small mb-1">{{ i.suggested_correction }}</p>
+        {% if s and s.suggested_text is not none %}<div class="quote sugg mb-2">{{ s.suggested_text if s.suggested_text != '' else '(remove this text)' }}</div>{% endif %}
+        {% if s and s.status in ('accepted','edited') %}<div class="small text-success"><i class="bi bi-check2"></i> Applied: “{{ s.final_text if s.final_text != '' else '(removed)' }}”</div>{% endif %}
+
+        {% if can_act and s and s.status == 'pending' %}
+        <div class="d-flex gap-2 flex-wrap mt-2 no-print">
+          {% if s.suggested_text is not none %}
+          <form method="post" action="{{ url_for('content.suggestion', sub_id=sub.id, sug_id=s.id, action='accept') }}">{{ csrf() }}<button class="btn btn-sm btn-success"><i class="bi bi-check-lg"></i> Accept</button></form>
+          {% else %}
+          <form method="post" action="{{ url_for('content.suggestion', sub_id=sub.id, sug_id=s.id, action='acknowledge') }}">{{ csrf() }}<button class="btn btn-sm btn-outline-success"><i class="bi bi-eye-check"></i> Acknowledge</button></form>
+          {% endif %}
+          <form method="post" action="{{ url_for('content.suggestion', sub_id=sub.id, sug_id=s.id, action='reject') }}">{{ csrf() }}<button class="btn btn-sm btn-outline-danger"><i class="bi bi-x-lg"></i> Reject</button></form>
+          {% if s.original_text and s.original_text in sub.content_text %}
+          <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#edit-{{ i.id }}"><i class="bi bi-pencil"></i> Edit manually</button>{% endif %}
+        </div>
+        {% if s.original_text and s.original_text in sub.content_text %}
+        <div class="collapse mt-2 no-print" id="edit-{{ i.id }}">
+          <form method="post" action="{{ url_for('content.suggestion', sub_id=sub.id, sug_id=s.id, action='edit') }}">{{ csrf() }}
+            <label class="form-label small" for="ct-{{ i.id }}">Your replacement text</label>
+            <textarea class="form-control mb-2" id="ct-{{ i.id }}" name="custom_text" rows="2">{{ s.suggested_text if s.suggested_text is not none else s.original_text }}</textarea>
+            <button class="btn btn-sm btn-primary">Apply my edit</button></form></div>{% endif %}
+        {% endif %}
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+
+  <div class="col-xl-5">
+    <div class="bb-card mb-3"><div class="bb-card-h">Current content</div><div class="bb-card-b"><div class="content-box">{{ sub.content_text }}</div>
+      {% if sub.image_filename %}<hr><div class="meta-label">Uploaded image</div>
+        <img class="img-fluid rounded border" style="max-height:200px" src="{{ url_for('files.serve', kind='sub-image', ident=sub.id) }}" alt="{{ sub.image_alt or 'Uploaded image (no alternative text provided)' }}">
+        <div class="small text-muted mt-1">Alt text: {{ sub.image_alt or 'none' }}</div>{% endif %}
+      {% if sub.pdf_filename %}<hr><a href="{{ url_for('files.serve', kind='sub-pdf', ident=sub.id) }}"><i class="bi bi-file-earmark-pdf"></i> {{ sub.pdf_original }}</a>{% endif %}</div></div>
+    {% if pending and preview != sub.content_text %}
+    <div class="bb-card mb-3"><div class="bb-card-h">Preview: if all pending suggestions were accepted</div><div class="bb-card-b"><div class="content-box">{{ preview }}</div>
+      <div class="small text-muted mt-2">Preview only – nothing is applied until you accept each suggestion.</div></div></div>{% endif %}
+
+    {% if can_act %}
+    <div class="bb-card mb-3 no-print"><div class="bb-card-h">Next steps</div><div class="bb-card-b d-grid gap-2">
+      <a class="btn btn-outline-primary" href="{{ url_for('content.edit', sub_id=sub.id) }}"><i class="bi bi-pencil-square"></i> Edit content manually</a>
+      <form method="post" action="{{ url_for('content.recheck', sub_id=sub.id) }}" data-loading="Re-running the brand check…">{{ csrf() }}<button class="btn btn-outline-primary w-100"><i class="bi bi-arrow-repeat"></i> Re-run check</button></form>
+      <form method="post" action="{{ url_for('content.send_review', sub_id=sub.id) }}" data-confirm="Send this content to a manager for review?">{{ csrf() }}
+        <button class="btn btn-primary w-100" {{ 'disabled' if not sub.is_check_current }}><i class="bi bi-send"></i> Send for review</button></form>
+      {% if not sub.is_check_current %}<div class="small text-muted">Re-run the check before sending.</div>{% endif %}
+      {% if summary.counts.High %}<div class="small text-warning-emphasis"><i class="bi bi-exclamation-triangle"></i> {{ summary.counts.High }} high-severity issue(s) remain; the reviewer will see them.</div>{% endif %}
+    </div></div>
+    {% elif current_user.can_review and sub.status == 'pending_review' and not is_author %}
+    <div class="bb-card mb-3 no-print"><div class="bb-card-b"><a class="btn btn-primary w-100" href="{{ url_for('reviews.detail', sub_id=sub.id) }}"><i class="bi bi-patch-check"></i> Open review panel</a></div></div>{% endif %}
+
+    {% if sub.reviews %}
+    <div class="bb-card"><div class="bb-card-h">Reviewer comments</div><ul class="list-group list-group-flush">
+      {% for r in sub.reviews|reverse %}<li class="list-group-item"><div class="d-flex justify-content-between"><strong>{{ r.reviewer.name }}</strong><span class="small text-muted">{{ r.created_at|dt }}</span></div>
+        <span class="st st-{{ r.decision if r.decision != 'comment' else 'checked' }}">{{ r.decision.replace('_',' ')|capitalize }}</span><div class="mt-1">{{ r.comment or '—' }}</div></li>{% endfor %}</ul></div>{% endif %}
+  </div>
+</div>
+{% endblock %}

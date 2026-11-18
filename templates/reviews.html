@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status, empty  with context %}
+{% block title %}Review Requests{% endblock %}
+{% block content %}
+<h1 class="bb-page-title">Review Requests</h1>
+<p class="bb-page-sub">{% if reviewer_view %}Submissions waiting for a human decision.{% else %}The status of your submissions and any reviewer feedback.{% endif %}</p>
+
+{% if reviewer_view %}
+<div class="bb-card mb-4"><div class="bb-card-h">Awaiting review <span class="st st-pending_review">{{ pending|length }}</span></div>
+  {% if pending %}<div class="table-responsive"><table class="table mb-0 align-middle"><thead><tr><th>Title</th><th>Author</th><th>Type</th><th>Score</th><th>Sent</th><th></th></tr></thead><tbody>
+    {% for s in pending %}<tr><td class="fw-semibold">{{ s.title }}</td><td>{{ s.author.name }}</td><td>{{ s.type_label }}</td>
+      <td>{{ s.score }}</td><td class="small text-muted">{{ s.submitted_at|dt }}</td>
+      <td class="text-end"><a class="btn btn-sm btn-primary" href="{{ url_for('reviews.detail', sub_id=s.id) }}">Review</a></td></tr>{% endfor %}</tbody></table></div>
+  {% else %}{% call empty('inbox', 'Nothing to review', 'You are all caught up.') %}{% endcall %}{% endif %}</div>
+{% endif %}
+
+{% if mine or not reviewer_view %}
+<div class="bb-card"><div class="bb-card-h">{{ 'My submissions' if not reviewer_view else 'My own submissions (cannot be self-reviewed)' }}</div>
+  {% if mine %}<div class="table-responsive"><table class="table mb-0 align-middle"><thead><tr><th>Title</th><th>Status</th><th>Score</th><th>Updated</th><th></th></tr></thead><tbody>
+    {% for s in mine %}<tr><td class="fw-semibold">{{ s.title }}<div class="small text-muted">{{ s.type_label }}</div></td><td>{{ status(s.status) }}</td>
+      <td>{{ s.score if s.score is not none else '—' }}</td><td class="small text-muted">{{ s.updated_at|dt }}</td>
+      <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{{ url_for('content.results', sub_id=s.id) }}">Open</a></td></tr>{% endfor %}</tbody></table></div>
+  {% else %}{% call empty('file-earmark-text', 'No submissions yet') %}
+    {% if current_user.can_submit %}<a class="btn btn-primary btn-sm mt-3" href="{{ url_for('content.submit') }}">Check content</a>{% endif %}{% endcall %}{% endif %}</div>
+{% endif %}
+{% endblock %}

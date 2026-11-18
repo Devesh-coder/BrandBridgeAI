@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf  with context %}
+{% block title %}Sign in{% endblock %}
+{% block layout %}
+<div class="auth-wrap">
+  <section class="auth-hero">
+    <div class="d-flex align-items-center gap-2 mb-4"><img src="{{ url_for('static', filename='images/logo.svg') }}" width="44" height="44" alt=""><span class="fs-4 fw-bold">BrandBridge AI</span></div>
+    <h1>Create Consistent.<br>Communicate Confidently.</h1>
+    <p class="lead text-white-50">Check content against your approved brand guidelines before it is published – with a human always making the final call.</p>
+    <ul class="list-unstyled mt-3">
+      <li><i class="bi bi-check2-circle me-2"></i>Tone, terminology, facts, claims, visuals and accessibility checks</li>
+      <li><i class="bi bi-check2-circle me-2"></i>Clear explanations and suggested corrections</li>
+      <li><i class="bi bi-check2-circle me-2"></i>Manager review: approve, reject or request changes</li>
+      <li><i class="bi bi-check2-circle me-2"></i>Works without any paid AI service</li>
+    </ul>
+  </section>
+  <section class="auth-form">
+    <div class="bb-card">
+      <h2 class="h4 mb-1">Welcome back</h2>
+      <p class="text-muted">Sign in to your workspace</p>
+      <form method="post" novalidate data-loading="Signing in…">
+        {{ csrf() }}
+        <div class="mb-3"><label class="form-label" for="email">Email</label>
+          <input class="form-control" id="email" name="email" type="email" required autocomplete="username" autofocus></div>
+        <div class="mb-3"><label class="form-label" for="password">Password</label>
+          <input class="form-control" id="password" name="password" type="password" required autocomplete="current-password"></div>
+        <button class="btn btn-primary w-100" type="submit">Sign in</button>
+      </form>
+      <p class="text-center text-muted small mt-3 mb-0">New here? <a href="{{ url_for('auth.register') }}">Create an account</a></p>
+    </div>
+  </section>
+</div>
+{% endblock %}

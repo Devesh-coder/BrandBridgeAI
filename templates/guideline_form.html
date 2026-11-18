@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf  with context %}
+{% block title %}{{ 'Edit' if g else 'New' }} guideline{% endblock %}
+{% block content %}
+{% macro val(name, default='') %}{{ (form.get(name) if form else (g[name] if g else default)) or '' }}{% endmacro %}
+{% set facts_text %}{% if form %}{{ form.get('facts','') }}{% elif g %}{% for f in g.facts %}{{ f.statement }}{% if f.source %} | {{ f.source }}{% endif %}
+{% endfor %}{% endif %}{% endset %}
+<h1 class="bb-page-title">{{ 'Edit brand guideline' if g else 'New brand guideline' }}</h1>
+<p class="bb-page-sub">Everything here is stored in the database and used by the checking engine.</p>
+<form method="post" enctype="multipart/form-data" data-loading="Saving guideline…">
+  {{ csrf() }}
+  <div class="row g-3">
+    <div class="col-lg-8">
+      <div class="bb-card mb-3"><div class="bb-card-h">Profile</div><div class="bb-card-b row g-3">
+        <div class="col-md-6"><label class="form-label" for="title">Guideline title *</label><input class="form-control" id="title" name="title" required maxlength="150" value="{{ val('title') }}"></div>
+        <div class="col-md-6"><label class="form-label" for="company_name">Company name *</label><input class="form-control" id="company_name" name="company_name" required maxlength="150" value="{{ val('company_name') }}"></div>
+        <div class="col-12"><label class="form-label" for="description">Company description</label><textarea class="form-control" id="description" name="description" rows="2">{{ val('description') }}</textarea></div>
+        <div class="col-md-4"><label class="form-label" for="tone_style">Tone style *</label>
+          <select class="form-select" id="tone_style" name="tone_style" required>
+            {% set cur = form.get('tone_style') if form else (g.tone_style if g else 'professional') %}
+            {% for k, label in tones.items() %}<option value="{{ k }}" {{ 'selected' if cur == k }}>{{ label }}</option>{% endfor %}</select>
+          <div class="form-text">Controls slang, contractions, exclamation and emoji limits.</div></div>
+        <div class="col-md-8"><label class="form-label" for="voice_tone">Brand voice and tone</label><textarea class="form-control" id="voice_tone" name="voice_tone" rows="3">{{ val('voice_tone') }}</textarea></div>
+      </div></div>
+      <div class="bb-card mb-3"><div class="bb-card-h">Terminology &amp; claims</div><div class="bb-card-b row g-3">
+        <div class="col-md-6"><label class="form-label" for="approved_terms">Approved terminology</label>
+          <textarea class="form-control font-monospace" id="approved_terms" name="approved_terms" rows="5" placeholder="ABC Technologies | ABC Tech, ABC Tech Ltd">{{ val('approved_terms') }}</textarea>
+          <div class="form-text">One per line: <code>Approved name | wrong variant, another variant</code></div></div>
+        <div class="col-md-6"><label class="form-label" for="prohibited_words">Restricted / prohibited words</label>
+          <textarea class="form-control font-monospace" id="prohibited_words" name="prohibited_words" rows="5" placeholder="cheap => affordable">{{ val('prohibited_words') }}</textarea>
+          <div class="form-text">One per line: <code>word => replacement</code> (replacement optional)</div></div>
+        <div class="col-md-6"><label class="form-label" for="unsupported_claims">Unsupported claims to avoid</label>
+          <textarea class="form-control font-monospace" id="unsupported_claims" name="unsupported_claims" rows="4" placeholder="100% guaranteed results => a focus on quality results">{{ val('unsupported_claims') }}</textarea></div>
+        <div class="col-md-6"><label class="form-label" for="slogans">Approved slogans</label>
+          <textarea class="form-control" id="slogans" name="slogans" rows="4" placeholder="One slogan per line">{{ val('slogans') }}</textarea></div>
+      </div></div>
+      <div class="bb-card"><div class="bb-card-h">Approved facts</div><div class="bb-card-b">
+        <textarea class="form-control font-monospace" id="facts" name="facts" rows="6" placeholder="ABC Technologies was founded in 2015. | Company profile 2026">{{ facts_text|trim }}</textarea>
+        <div class="form-text">One per line: <code>Statement | Source</code>. Content is compared against these. Claims that match none are flagged <em>Needs Human Verification</em> – never “false”.</div></div></div>
+    </div>
+    <div class="col-lg-4">
+      <div class="bb-card mb-3"><div class="bb-card-h">Visual identity</div><div class="bb-card-b">
+        <label class="form-label" for="brand_colours">Brand colours (hex)</label>
+        <textarea class="form-control font-monospace" id="brand_colours" name="brand_colours" rows="2" placeholder="#2563EB, #0F172A">{{ val('brand_colours') }}</textarea>
+        <label class="form-label mt-3" for="logo">Approved logo (PNG/JPG/WEBP, ≤5 MB)</label>
+        <input class="form-control" type="file" id="logo" name="logo" accept=".png,.jpg,.jpeg,.webp">
+        {% if g and g.logo %}<div class="form-text">Current: {{ g.logo.original_filename }} (uploading replaces it)</div>{% endif %}
+        <label class="form-label mt-3" for="guideline_doc">Guidelines document (PDF, ≤10 MB)</label>
+        <input class="form-control" type="file" id="guideline_doc" name="guideline_doc" accept=".pdf">
+        {% if g and g.document %}<div class="form-text">Current: {{ g.document.original_filename }}</div>{% endif %}</div></div>
+      <div class="bb-card"><div class="bb-card-b">
+        <div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" role="switch" id="is_active" name="is_active"
+          {{ 'checked' if (form.get('is_active') if form else (g.is_active if g else True)) }}><label class="form-check-label" for="is_active">Active (used for checking)</label></div>
+        <button class="btn btn-primary w-100" type="submit"><i class="bi bi-save"></i> Save guideline</button>
+        <a class="btn btn-link w-100" href="{{ url_for('guidelines.index') }}">Cancel</a></div></div>
+    </div>
+  </div>
+</form>
+{% endblock %}

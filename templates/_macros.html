@@ -1,0 +1,20 @@
+{% macro csrf() %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endmacro %}
+
+{% macro sev(s) %}<span class="sev sev-{{ s }}">{{ s }}</span>{% endmacro %}
+
+{% macro status(s) %}<span class="st st-{{ s }}">{{ STATUS_LABELS.get(s, s) }}</span>{% endmacro %}
+
+{% macro verify(v) %}
+  {% if v == 'needs_human_verification' %}<span class="sev verify"><i class="bi bi-person-check"></i> Needs Human Verification</span>
+  {% elif v == 'conflicts_with_approved_fact' %}<span class="sev conflict"><i class="bi bi-exclamation-diamond"></i> Conflicts with approved fact</span>{% endif %}
+{% endmacro %}
+
+{% macro empty(icon, title, text='') %}
+<div class="empty"><i class="bi bi-{{ icon }}"></i><div class="fw-semibold text-body">{{ title }}</div>{% if text %}<div class="small">{{ text }}</div>{% endif %}{{ caller() if caller }}</div>
+{% endmacro %}
+
+{% macro stat(label, value, icon, tone, hint='') %}
+<div class="bb-card stat h-100"><div class="d-flex justify-content-between align-items-start">
+  <div><div class="label">{{ label }}</div><div class="value">{{ value }}</div>{% if hint %}<div class="small text-muted">{{ hint }}</div>{% endif %}</div>
+  <div class="icon i-{{ tone }}"><i class="bi bi-{{ icon }}"></i></div></div></div>
+{% endmacro %}

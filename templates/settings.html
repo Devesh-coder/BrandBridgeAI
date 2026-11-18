@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf  with context %}
+{% block title %}Settings{% endblock %}
+{% block content %}
+<h1 class="bb-page-title">Settings</h1>
+<p class="bb-page-sub">Your profile{% if current_user.is_admin %}, team and workspace{% endif %}.</p>
+<div class="row g-3">
+  <div class="col-lg-5">
+    <form class="bb-card mb-3" method="post" autocomplete="off">{{ csrf() }}
+      <div class="bb-card-h">My profile</div><div class="bb-card-b">
+        <div class="mb-3"><label class="form-label" for="name">Name</label><input class="form-control" id="name" name="name" required maxlength="120" value="{{ current_user.name }}"></div>
+        <div class="mb-3"><label class="form-label">Email</label><input class="form-control" value="{{ current_user.email }}" disabled></div>
+        <div class="mb-3"><label class="form-label">Role</label><div><span class="st st-checked">{{ current_user.role_label }}</span></div></div>
+        <hr><div class="mb-2 fw-semibold">Change password <span class="text-muted fw-normal small">(optional)</span></div>
+        <div class="mb-2"><input class="form-control" type="password" name="current_password" placeholder="Current password" autocomplete="current-password"></div>
+        <div class="mb-3"><input class="form-control" type="password" name="new_password" placeholder="New password (min 8, letter + number)" autocomplete="new-password"></div>
+        <button class="btn btn-primary" type="submit">Save changes</button></div></form>
+    <div class="bb-card"><div class="bb-card-h">AI assistance</div><div class="bb-card-b small">
+      {% if ai.configured %}<span class="st st-approved">LLM connected</span> <span class="text-muted">{{ ai.provider }} · {{ ai.model }}</span>
+        <p class="mt-2 mb-0 text-muted">AI findings are validated, labelled “AI”, and never approve content.</p>
+      {% else %}<span class="st">Rule-based mode</span>
+        <p class="mt-2 mb-0 text-muted">No LLM key is configured, so the built-in rule engine runs alone. To add AI-assisted review, set <code>AI_PROVIDER</code>, <code>AI_API_KEY</code> and optionally <code>AI_MODEL</code> in the server's environment (see README). Keys are never sent to the browser.</p>{% endif %}</div></div>
+  </div>
+  <div class="col-lg-7">
+  {% if current_user.is_admin %}
+    <div class="bb-card mb-3"><div class="bb-card-h">Organisation: {{ org.name }}</div><div class="bb-card-b">
+      <div class="meta-label">Invite code (share with teammates so they can join as Content Creators)</div>
+      <div class="d-flex gap-2 align-items-center flex-wrap"><code class="fs-5">{{ org.invite_code }}</code>
+        <form method="post" action="{{ url_for('dashboard.regenerate_invite') }}" data-confirm="Generate a new invite code? The old one stops working.">{{ csrf() }}<button class="btn btn-sm btn-outline-secondary">Regenerate</button></form></div></div></div>
+    <div class="bb-card mb-3"><div class="bb-card-h">Team &amp; roles</div><div class="table-responsive"><table class="table mb-0 align-middle">
+      <thead><tr><th>User</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody>
+      {% for u in users %}<tr><td><div class="fw-semibold">{{ u.name }}</div><div class="small text-muted">{{ u.email }}</div></td>
+        <td>{% if u.id == current_user.id %}<span class="st st-checked">{{ u.role_label }}</span>
+          {% else %}<form class="d-flex gap-1" method="post" action="{{ url_for('dashboard.set_role', user_id=u.id) }}">{{ csrf() }}
+            <select class="form-select form-select-sm" name="role" aria-label="Role for {{ u.name }}">{% for r in roles %}<option value="{{ r }}" {{ 'selected' if u.role == r }}>{{ ROLE_LABELS[r] }}</option>{% endfor %}</select>
+            <button class="btn btn-sm btn-outline-primary">Set</button></form>{% endif %}</td>
+        <td>{{ 'Active' if u.active else 'Deactivated' }}</td>
+        <td class="text-end">{% if u.id != current_user.id %}<form method="post" action="{{ url_for('dashboard.toggle_active', user_id=u.id) }}" data-confirm="{{ 'Deactivate' if u.active else 'Activate' }} {{ u.name }}?">{{ csrf() }}
+          <button class="btn btn-sm btn-outline-{{ 'danger' if u.active else 'success' }}">{{ 'Deactivate' if u.active else 'Activate' }}</button></form>{% endif %}</td></tr>{% endfor %}
+      </tbody></table></div></div>
+    <div class="bb-card"><div class="bb-card-h">Recent audit log</div>
+      <div class="table-responsive" style="max-height:320px;overflow:auto"><table class="table table-sm mb-0"><tbody>
+      {% for l in logs %}<tr><td class="small text-muted text-nowrap">{{ l.created_at|dt }}</td><td class="small">{{ l.user.name if l.user else '—' }}</td><td class="small"><code>{{ l.action }}</code> {{ l.details|truncate(70) }}</td></tr>
+      {% else %}<tr><td class="text-muted p-3">No activity yet.</td></tr>{% endfor %}</tbody></table></div></div>
+  {% else %}
+    <div class="bb-card"><div class="bb-card-b text-muted">Team management is available to administrators.</div></div>
+  {% endif %}
+  </div>
+</div>
+{% endblock %}

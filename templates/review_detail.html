@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf, sev, status, verify  with context %}
+{% block title %}Review – {{ sub.title }}{% endblock %}
+{% block content %}
+{% set is_author = sub.author_id == current_user.id %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <div><h1 class="bb-page-title">{{ sub.title }}</h1>
+    <p class="bb-page-sub mb-2">{{ sub.type_label }} · by {{ sub.author.name }} · version {{ sub.version }} · sent {{ sub.submitted_at|dt }}</p>{{ status(sub.status) }}</div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a class="btn btn-outline-secondary" href="{{ url_for('content.results', sub_id=sub.id) }}"><i class="bi bi-file-earmark-text"></i> Full report</a>
+    <a class="btn btn-outline-secondary" href="{{ url_for('content.revisions', sub_id=sub.id) }}"><i class="bi bi-clock-history"></i> Revision history</a></div>
+</div>
+<div class="alert alert-info mt-3"><i class="bi bi-info-circle"></i> The automated score is <strong>{{ summary.score }}/100</strong> ({{ summary.label }}). It is indicative only – <strong>you</strong> make the final decision.</div>
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="bb-card mb-3"><div class="bb-card-h">Submitted content</div><div class="bb-card-b"><div class="content-box">{{ sub.content_text }}</div>
+      {% if sub.image_filename %}<img class="img-fluid rounded border mt-3" style="max-height:200px" src="{{ url_for('files.serve', kind='sub-image', ident=sub.id) }}" alt="{{ sub.image_alt or 'Uploaded image (no alternative text)' }}">{% endif %}
+      {% if sub.version > 1 %}<details class="mt-3"><summary class="small">Show the original submission</summary><div class="content-box mt-2">{{ sub.original_text }}</div></details>{% endif %}</div></div>
+    <div class="bb-card"><div class="bb-card-h">Detected issues and how the creator handled them <span class="st">{{ issues|length }}</span></div>
+      {% if issues %}<ul class="list-group list-group-flush">{% for i in issues %}{% set s = i.suggestion %}
+        <li class="list-group-item"><div class="d-flex justify-content-between gap-2 flex-wrap"><strong>{{ i.title }}</strong>
+          <span class="d-flex gap-1 flex-wrap">{{ sev(i.severity) }}<span class="st">{{ i.category }}</span>{{ verify(i.verification) }}</span></div>
+          <div class="small text-muted text-truncate">“{{ i.original_text|truncate(110) }}”</div>
+          <div class="small mt-1">Creator action: <strong>{{ s.status|capitalize if s else '—' }}</strong>{% if s and s.status in ('accepted','edited') %} → “{{ s.final_text|truncate(80) }}”{% endif %}</div></li>{% endfor %}</ul>
+      {% else %}<div class="bb-card-b text-muted">No issues were detected.</div>{% endif %}</div>
+  </div>
+  <div class="col-lg-5">
+    {% if sub.status == 'pending_review' and not is_author %}
+    <div class="bb-card mb-3"><div class="bb-card-h">Your decision</div><div class="bb-card-b">
+      <form method="post" action="{{ url_for('reviews.decide', sub_id=sub.id) }}" data-confirm="Record this decision?">{{ csrf() }}
+        <label class="form-label" for="comment">Comment <span class="text-muted">(required to reject or request changes)</span></label>
+        <textarea class="form-control mb-3" id="comment" name="comment" rows="4" maxlength="2000"></textarea>
+        <div class="d-grid gap-2">
+          <button class="btn btn-success" name="decision" value="approved"><i class="bi bi-check-circle"></i> Approve</button>
+          <button class="btn btn-warning" name="decision" value="changes_requested"><i class="bi bi-arrow-repeat"></i> Request changes</button>
+          <button class="btn btn-danger" name="decision" value="rejected"><i class="bi bi-x-octagon"></i> Reject</button>
+          <button class="btn btn-outline-secondary" name="decision" value="comment"><i class="bi bi-chat-left-text"></i> Add comment only</button>
+        </div></form></div></div>
+    {% elif is_author %}<div class="alert alert-warning">You cannot review your own submission.</div>
+    {% else %}<div class="alert alert-secondary">This submission is <strong>{{ sub.status_label }}</strong>; no decision is pending.</div>{% endif %}
+    <div class="bb-card"><div class="bb-card-h">Review thread</div>
+      {% if sub.reviews %}<ul class="list-group list-group-flush">{% for r in sub.reviews|reverse %}
+        <li class="list-group-item"><div class="d-flex justify-content-between"><strong>{{ r.reviewer.name }}</strong><span class="small text-muted">{{ r.created_at|dt }}</span></div>
+          <span class="st st-{{ r.decision if r.decision != 'comment' else 'checked' }}">{{ r.decision.replace('_',' ')|capitalize }}</span> <span class="small text-muted">on v{{ r.content_version }}</span>
+          <div class="mt-1">{{ r.comment or '—' }}</div></li>{% endfor %}</ul>
+      {% else %}<div class="bb-card-b text-muted">No reviews yet.</div>{% endif %}</div>
+  </div>
+</div>
+{% endblock %}

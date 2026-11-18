@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status  with context %}
+{% block title %}Revision history – {{ sub.title }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <div><h1 class="bb-page-title">Revision history</h1><p class="bb-page-sub">{{ sub.title }} · current version {{ sub.version }} · {{ sub.status_label }}</p></div>
+  <a class="btn btn-outline-secondary" href="{{ url_for('content.results', sub_id=sub.id) }}"><i class="bi bi-arrow-left"></i> Back to report</a>
+</div>
+<div class="row g-3">
+  <div class="col-lg-5"><div class="bb-card"><div class="bb-card-h">Timeline</div>
+    <ul class="list-group list-group-flush">
+      {% for r in sub.revisions|reverse %}
+      <li class="list-group-item {{ 'active-rev bg-primary-subtle' if rev and rev.id == r.id }}">
+        <div class="d-flex justify-content-between gap-2"><strong>{{ events.get(r.event, r.event) }}</strong><span class="small text-muted text-nowrap">{{ r.created_at|dt }}</span></div>
+        <div class="small text-muted">v{{ r.version }} · {{ r.user.name if r.user else 'system' }}{% if r.score is not none %} · score {{ r.score }}{% endif %}</div>
+        {% if r.details %}<div class="small">{{ r.details|truncate(160) }}</div>{% endif %}
+        <a class="small" href="{{ url_for('content.revision', sub_id=sub.id, rev_id=r.id) }}">View this version</a></li>
+      {% endfor %}</ul></div></div>
+  <div class="col-lg-7">
+    {% if rev %}
+    <div class="bb-card mb-3"><div class="bb-card-h">Snapshot: {{ events.get(rev.event, rev.event) }} (v{{ rev.version }})</div><div class="bb-card-b">
+      <div class="small text-muted mb-2">{{ rev.created_at|dt }} · status then: {{ STATUS_LABELS.get(rev.status_snapshot, rev.status_snapshot) }}</div>
+      <div class="content-box">{{ rev.content_snapshot }}</div></div></div>
+    {% if diff %}<div class="bb-card"><div class="bb-card-h">Changes since the previous entry</div><div class="bb-card-b"><pre class="pre-diff mb-0">{{ diff }}</pre></div></div>{% endif %}
+    {% else %}
+    <div class="bb-card mb-3"><div class="bb-card-h">Original submission</div><div class="bb-card-b"><div class="content-box">{{ sub.original_text }}</div></div></div>
+    <div class="bb-card"><div class="bb-card-h">Current content</div><div class="bb-card-b"><div class="content-box">{{ sub.content_text }}</div></div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status, empty  with context %}
+{% block title %}Approval History{% endblock %}
+{% block content %}
+<h1 class="bb-page-title">Approval History</h1>
+<p class="bb-page-sub">Every human review decision and comment, with reviewer and date.</p>
+<div class="bb-card">
+  {% if rows %}<div class="table-responsive"><table class="table mb-0 align-middle">
+    <thead><tr><th>Date</th><th>Content</th><th>Decision</th><th>Reviewer</th><th>Comment</th><th>Version</th><th></th></tr></thead><tbody>
+    {% for r in rows %}<tr><td class="small text-muted text-nowrap">{{ r.created_at|dt }}</td>
+      <td class="fw-semibold">{{ r.submission.title }}<div class="small text-muted fw-normal">by {{ r.submission.author.name }}</div></td>
+      <td><span class="st st-{{ r.decision if r.decision != 'comment' else 'checked' }}">{{ r.decision.replace('_',' ')|capitalize }}</span></td>
+      <td>{{ r.reviewer.name }}</td><td style="max-width:280px">{{ r.comment or '—' }}</td><td>v{{ r.content_version }}</td>
+      <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{{ url_for('content.revisions', sub_id=r.submission_id) }}">History</a></td></tr>{% endfor %}
+  </tbody></table></div>
+  {% else %}{% call empty('clock-history', 'No review decisions yet', 'Approvals, rejections and change requests will be listed here.') %}{% endcall %}{% endif %}
+</div>
+{% endblock %}

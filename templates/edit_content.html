@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf  with context %}
+{% block title %}Edit – {{ sub.title }}{% endblock %}
+{% block content %}
+<h1 class="bb-page-title">Edit content</h1>
+<p class="bb-page-sub">{{ sub.title }} · currently version {{ sub.version }}. Saving creates a new version and automatically re-runs the brand check.</p>
+<form class="bb-card" method="post" data-loading="Saving and re-checking…">
+  {{ csrf() }}
+  <div class="bb-card-b">
+    <label class="form-label d-flex justify-content-between" for="content_text"><span>Content</span><span class="small text-muted" id="cc"></span></label>
+    <textarea class="form-control mb-3" id="content_text" name="content_text" rows="14" data-counter="cc" required>{{ request.form.get('content_text', sub.content_text) }}</textarea>
+    {% if sub.image_filename %}
+    <label class="form-label" for="image_alt">Image alternative text</label>
+    <input class="form-control" id="image_alt" name="image_alt" maxlength="500" value="{{ request.form.get('image_alt', sub.image_alt or '') }}">{% endif %}
+  </div>
+  <div class="bb-card-b border-top d-flex gap-2">
+    <button class="btn btn-primary" type="submit"><i class="bi bi-save"></i> Save &amp; re-check</button>
+    <a class="btn btn-outline-secondary" href="{{ url_for('content.results', sub_id=sub.id) }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

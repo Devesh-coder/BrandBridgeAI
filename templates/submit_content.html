@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf, status, empty  with context %}
+{% block title %}Content Checker{% endblock %}
+{% block content %}
+<h1 class="bb-page-title">Content Checker</h1>
+<p class="bb-page-sub">Submit content to be checked against your brand guidelines. Nothing is published automatically.</p>
+{% if not has_guidelines %}
+<div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i> No active brand guidelines exist. Ask an administrator to <a href="{{ url_for('guidelines.index') }}">add guidelines</a> first.</div>
+{% endif %}
+<div class="row g-3">
+  <div class="col-lg-8">
+    <form class="bb-card" method="post" enctype="multipart/form-data" data-loading="Analysing your content against the brand guidelines…">
+      {{ csrf() }}
+      <div class="bb-card-h">New submission</div>
+      <div class="bb-card-b row g-3">
+        <div class="col-md-7"><label class="form-label" for="title">Content title *</label>
+          <input class="form-control" id="title" name="title" required maxlength="200" value="{{ form.get('title','') }}" placeholder="e.g. Diwali campaign – launch post"></div>
+        <div class="col-md-5"><label class="form-label" for="content_type">Content type *</label>
+          <select class="form-select" id="content_type" name="content_type" required>
+            {% for k, label in types.items() %}<option value="{{ k }}" {{ 'selected' if form.get('content_type') == k }}>{{ label }}</option>{% endfor %}</select></div>
+        <div class="col-12"><label class="form-label d-flex justify-content-between" for="content_text"><span>Content *</span><span class="small text-muted" id="cc">0 characters</span></label>
+          <textarea class="form-control" id="content_text" name="content_text" rows="9" data-counter="cc" placeholder="Paste your social post, ad copy, email or web copy here…">{{ form.get('content_text','') }}</textarea></div>
+        <div class="col-md-6"><label class="form-label" for="pdf">Upload PDF <span class="text-muted">(text is extracted)</span></label>
+          <input class="form-control" type="file" id="pdf" name="pdf" accept=".pdf,application/pdf"><div class="form-text">PDF only, up to 10 MB. Replaces pasted text.</div></div>
+        <div class="col-md-6"><label class="form-label" for="image">Upload image <span class="text-muted">(logo / colour check)</span></label>
+          <input class="form-control" type="file" id="image" name="image" accept=".png,.jpg,.jpeg,.webp"><div class="form-text">PNG, JPG or WEBP, up to 5 MB.</div></div>
+        <div class="col-12"><label class="form-label" for="image_alt">Image alternative text</label>
+          <input class="form-control" id="image_alt" name="image_alt" maxlength="500" value="{{ form.get('image_alt','') }}" placeholder="Describe the image for screen-reader users"></div>
+      </div>
+      <div class="bb-card-b border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span class="small text-muted"><i class="bi bi-shield-lock"></i> Files are stored privately and never exposed by public URL.</span>
+        <button class="btn btn-primary" type="submit" {{ 'disabled' if not has_guidelines }}><i class="bi bi-search"></i> Check content</button>
+      </div>
+    </form>
+  </div>
+  <div class="col-lg-4">
+    <div class="bb-card mb-3"><div class="bb-card-h">How it works</div><div class="bb-card-b small">
+      <ol class="ps-3 mb-0"><li class="mb-1">The engine checks tone, terminology, facts, claims, visuals and accessibility.</li>
+        <li class="mb-1">You review each issue and accept, reject or edit the suggestion.</li>
+        <li class="mb-1">Re-check, then send to a manager.</li>
+        <li>A human approves, rejects or requests changes. <strong>AI never approves content.</strong></li></ol></div></div>
+    <div class="bb-card"><div class="bb-card-h">Your recent submissions</div>
+      {% if recent %}<ul class="list-group list-group-flush">{% for s in recent %}
+        <li class="list-group-item d-flex justify-content-between align-items-center gap-2"><a href="{{ url_for('content.results', sub_id=s.id) }}" class="text-decoration-none text-truncate">{{ s.title }}</a>{{ status(s.status) }}</li>{% endfor %}</ul>
+      {% else %}{% call empty('file-earmark-text', 'Nothing submitted yet') %}{% endcall %}{% endif %}</div>
+  </div>
+</div>
+{% endblock %}

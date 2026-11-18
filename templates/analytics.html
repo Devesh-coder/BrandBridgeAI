@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% from "_macros.html" import stat, empty  with context %}
+{% block title %}Analytics{% endblock %}
+{% block body_attrs %}data-analytics-url="{{ url_for('analytics.data') }}"{% endblock %}
+{% block scripts_lib %}<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>{% endblock %}
+{% block content %}
+{% set t = stats.totals %}
+<h1 class="bb-page-title">Analytics</h1>
+<p class="bb-page-sub">Live figures calculated from your organisation's database records{% if current_user.role == 'creator' %} (your submissions only){% endif %}.</p>
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3">{{ stat('Total submissions', t.submissions, 'files', 'blue') }}</div>
+  <div class="col-6 col-lg-3">{{ stat('Approved', t.approved, 'patch-check', 'green') }}</div>
+  <div class="col-6 col-lg-3">{{ stat('Pending reviews', t.pending, 'hourglass-split', 'amber') }}</div>
+  <div class="col-6 col-lg-3">{{ stat('Rejected', t.rejected, 'x-octagon', 'red') }}</div>
+  <div class="col-6 col-lg-3">{{ stat('Issues detected', t.issues, 'exclamation-triangle', 'slate') }}</div>
+  <div class="col-6 col-lg-3">{{ stat('High severity', t.high, 'fire', 'red') }}</div>
+  <div class="col-6 col-lg-3">{{ stat('Need human verification', t.needs_verification, 'person-check', 'violet') }}</div>
+  <div class="col-6 col-lg-3">{{ stat('Avg. score', (t.avg_score ~ '/100') if t.avg_score is not none else '—', 'speedometer2', 'blue', 'indicative only') }}</div>
+</div>
+<div class="row g-3 mb-3">
+  <div class="col-lg-6"><div class="bb-card"><div class="bb-card-h">Monthly review activity</div><div class="bb-card-b"><div class="chart-box"><canvas id="chartMonthly"></canvas></div>
+    <div id="chartMonthly-empty" style="display:none">{% call empty('calendar3', 'No activity yet') %}{% endcall %}</div></div></div></div>
+  <div class="col-lg-6"><div class="bb-card"><div class="bb-card-h">Compliance score trend <small class="text-muted fw-normal">avg. per day of checks</small></div><div class="bb-card-b"><div class="chart-box"><canvas id="chartTrend"></canvas></div>
+    <div id="chartTrend-empty" style="display:none">{% call empty('graph-up', 'No checks yet') %}{% endcall %}</div></div></div></div>
+  <div class="col-lg-4"><div class="bb-card"><div class="bb-card-h">Submissions by status</div><div class="bb-card-b"><div class="chart-box"><canvas id="chartStatus"></canvas></div>
+    <div id="chartStatus-empty" style="display:none">{% call empty('pie-chart', 'No data yet') %}{% endcall %}</div></div></div></div>
+  <div class="col-lg-4"><div class="bb-card"><div class="bb-card-h">Issues by severity</div><div class="bb-card-b"><div class="chart-box"><canvas id="chartSeverity"></canvas></div>
+    <div id="chartSeverity-empty" style="display:none">{% call empty('bar-chart', 'No issues recorded') %}{% endcall %}</div></div></div></div>
+  <div class="col-lg-4"><div class="bb-card"><div class="bb-card-h">Issues by category</div><div class="bb-card-b"><div class="chart-box"><canvas id="chartCategories"></canvas></div>
+    <div id="chartCategories-empty" style="display:none">{% call empty('bar-chart', 'No issues recorded') %}{% endcall %}</div></div></div></div>
+</div>
+<div class="bb-card"><div class="bb-card-h">Most common mistakes</div>
+  {% if stats.common_mistakes %}<div class="table-responsive"><table class="table mb-0"><thead><tr><th>Issue</th><th>Category</th><th class="text-end">Occurrences</th></tr></thead><tbody>
+    {% for m in stats.common_mistakes %}<tr><td>{{ m.title }}</td><td><span class="st">{{ m.category }}</span></td><td class="text-end fw-semibold">{{ m.count }}</td></tr>{% endfor %}</tbody></table></div>
+  {% else %}{% call empty('lightbulb', 'No recurring issues yet', 'Patterns appear once content has been checked.') %}{% endcall %}{% endif %}</div>
+{% endblock %}

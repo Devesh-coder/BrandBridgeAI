@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf  with context %}
+{% block title %}Create account{% endblock %}
+{% block layout %}
+<div class="auth-wrap">
+  <section class="auth-hero">
+    <div class="d-flex align-items-center gap-2 mb-4"><img src="{{ url_for('static', filename='images/logo.svg') }}" width="44" height="44" alt=""><span class="fs-4 fw-bold">BrandBridge AI</span></div>
+    <h1>Set up your brand workspace</h1>
+    <p class="lead text-white-50">Start a new organisation as its Administrator, or join your team with an invite code.</p>
+    <ul class="list-unstyled mt-3">
+      <li><i class="bi bi-person-gear me-2"></i><strong>Administrator</strong> – manages brand guidelines and users</li>
+      <li><i class="bi bi-pencil-square me-2"></i><strong>Content Creator</strong> – submits and revises content</li>
+      <li><i class="bi bi-patch-check me-2"></i><strong>Manager / Reviewer</strong> – approves, rejects or requests changes</li>
+    </ul>
+  </section>
+  <section class="auth-form">
+    <div class="bb-card">
+      <h2 class="h4 mb-3">Create your account</h2>
+      <form method="post" novalidate data-loading="Creating your account…">
+        {{ csrf() }}
+        <div class="mb-3"><label class="form-label" for="name">Full name</label>
+          <input class="form-control" id="name" name="name" required maxlength="120" value="{{ form.get('name','') }}"></div>
+        <div class="mb-3"><label class="form-label" for="email">Email</label>
+          <input class="form-control" id="email" name="email" type="email" required value="{{ form.get('email','') }}" autocomplete="username"></div>
+        <div class="row g-2">
+          <div class="col-sm-6 mb-3"><label class="form-label" for="password">Password</label>
+            <input class="form-control" id="password" name="password" type="password" required minlength="8" autocomplete="new-password"></div>
+          <div class="col-sm-6 mb-3"><label class="form-label" for="confirm">Confirm</label>
+            <input class="form-control" id="confirm" name="confirm" type="password" required autocomplete="new-password"></div>
+        </div>
+        <div class="form-text mb-3 mt-n2">At least 8 characters, with a letter and a number.</div>
+        <div class="mb-3">
+          <div class="form-check"><input class="form-check-input" type="radio" name="mode" id="m-join" value="join" {{ 'checked' if form.get('mode','join')=='join' }}>
+            <label class="form-check-label" for="m-join">Join an existing organisation (Content Creator)</label></div>
+          <div class="form-check"><input class="form-check-input" type="radio" name="mode" id="m-create" value="create" {{ 'checked' if form.get('mode')=='create' }}>
+            <label class="form-check-label" for="m-create">Create a new organisation (Administrator)</label></div>
+        </div>
+        <div class="mb-3"><label class="form-label" for="invite_code">Invite code <span class="text-muted">(to join)</span></label>
+          <input class="form-control" id="invite_code" name="invite_code" value="{{ form.get('invite_code','') }}" placeholder="e.g. ABC-DEMO"></div>
+        <div class="mb-3"><label class="form-label" for="org_name">Organisation name <span class="text-muted">(to create)</span></label>
+          <input class="form-control" id="org_name" name="org_name" maxlength="150" value="{{ form.get('org_name','') }}"></div>
+        <button class="btn btn-primary w-100" type="submit">Create account</button>
+      </form>
+      <p class="text-center text-muted small mt-3 mb-0">Already registered? <a href="{{ url_for('auth.login') }}">Sign in</a></p>
+    </div>
+  </section>
+</div>
+{% endblock %}
